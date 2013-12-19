@@ -300,7 +300,11 @@ static void *reader_thread(void *data)
 	
 	CPU_ZERO(&cpu_mask);
 	CPU_SET(cpu, &cpu_mask);
+#if (__GLIBC__ == 2 && __GLIBC_MINOR__ <= 3)
+	if( sched_setaffinity( 0, &cpu_mask ) < 0 )
+#else
 	if( sched_setaffinity( 0, sizeof(cpu_mask), &cpu_mask ) < 0 )
+#endif
 		_perr("sched_setaffinity");
 
 	pollfd.fd = relay_fd[cpu];
