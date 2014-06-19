@@ -575,6 +575,42 @@ extern void __store_deref_bad(void);
       STORE_DEREF_FAULT(addr);						      \
   })
 
+#elif defined __mips__
+
+#define _stp_deref(size, addr, seg)                                           \
+  ({									      \
+    int _bad = 0;							      \
+    intptr_t _v = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
+    if (lookup_bad_addr((unsigned long)addr, size))			      \
+      _bad = 1;                                                               \
+    else                                                                      \
+      _bad = 1;                                                               \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
+    if (_bad)								      \
+      DEREF_FAULT(addr);						      \
+    _v;									      \
+  })
+
+#define _stp_store_deref(size, addr, value, seg)                              \
+  ({									      \
+    int _bad = 0;							      \
+    mm_segment_t _oldfs = get_fs();                                           \
+    set_fs(seg);                                                              \
+    pagefault_disable();                                                      \
+    if (lookup_bad_addr((unsigned long)addr, size))			      \
+      _bad = 1;                                                               \
+    else                                                                      \
+      _bad = 1;                                                               \
+    pagefault_enable();                                                       \
+    set_fs(_oldfs);                                                           \
+    if (_bad)								      \
+      STORE_DEREF_FAULT(addr);						      \
+  })
+
 #elif defined (__aarch64__)
 
 #define _stp_deref(size, addr, seg)                                           \
