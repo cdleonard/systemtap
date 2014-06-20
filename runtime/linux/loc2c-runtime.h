@@ -577,6 +577,39 @@ extern void __store_deref_bad(void);
 
 #elif defined __mips__
 
+#define __stp_get_user_asm(val, insn, addr, err)                              \
+{                                                                             \
+       __asm__ __volatile__(                                                  \
+       "1:     " insn "        %1, %3                          \n"            \
+       "2:                                                     \n"            \
+       "       .section .fixup,\"ax\"                          \n"            \
+       "3:     li      %0, %4                                  \n"            \
+       "       j       2b                                      \n"            \
+       "       .previous                                       \n"            \
+       "       .section __ex_table,\"a\"                       \n"            \
+       "       "__UA_ADDR "\t1b, 3b                            \n"            \
+       "       .previous                                       \n"            \
+       : "=r" (err), "=r" (val)                                               \
+       : "0" (0), "o" (__m(addr)), "i" (-EFAULT));                            \
+}
+
+#define __stp_put_user_asm(val, insn, addr, err)                              \
+{                                                                             \
+       __asm__ __volatile__(                                                  \
+       "1:     " insn "        %z2, %3         # __put_user_asm\n"            \
+       "2:                                                     \n"            \
+       "       .section        .fixup,\"ax\"                   \n"            \
+       "3:     li      %0, %4                                  \n"            \
+       "       j       2b                                      \n"            \
+       "       .previous                                       \n"            \
+       "       .section        __ex_table,\"a\"                \n"            \
+       "       " __UA_ADDR "   1b, 3b                          \n"            \
+       "       .previous                                       \n"            \
+       : "=r" (err)                                                           \
+       : "0" (0), "Jr" (val), "o" (__m(addr)),                                \
+         "i" (-EFAULT));                                                      \
+}
+
 #define _stp_deref(size, addr, seg)                                           \
   ({									      \
     int _bad = 0;							      \
@@ -587,7 +620,14 @@ extern void __store_deref_bad(void);
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
-      _bad = 1;                                                               \
+      switch (size)                                                           \
+        {                                                                     \
+        case 1: __stp_get_user_asm(_v, "lb", addr, _bad); break;              \
+        case 2: __stp_get_user_asm(_v, "lh", addr, _bad); break;              \
+        case 4: __stp_get_user_asm(_v, "lw", addr, _bad); break;              \
+        case 8: __stp_get_user_asm(_v, "ld", addr, _bad); break;              \
+        default: __get_user_unknown(); break;                                 \
+        }                                                                     \
     pagefault_enable();                                                       \
     set_fs(_oldfs);                                                           \
     if (_bad)								      \
@@ -604,7 +644,14 @@ extern void __store_deref_bad(void);
     if (lookup_bad_addr((unsigned long)addr, size))			      \
       _bad = 1;                                                               \
     else                                                                      \
-      _bad = 1;                                                               \
+      switch (size)                                                           \
+        {                                                                     \
+        case 1: __stp_put_user_asm(value, "sb", addr, _bad); break;           \
+        case 2: __stp_put_user_asm(value, "sh", addr, _bad); break;           \
+        case 4: __stp_put_user_asm(value, "sw", addr, _bad); break;           \
+        case 8: __stp_put_user_asm(value, "sd", addr, _bad); break;           \
+        default: __put_user_unknown(); break;                                 \
+        }                                                                     \
     pagefault_enable();                                                       \
     set_fs(_oldfs);                                                           \
     if (_bad)								      \
