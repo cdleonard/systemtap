@@ -34,6 +34,8 @@ struct unwind_frame_info
 #include "arm.h"
 #elif defined (__aarch64__)
 #include "arm64.h"
+#elif defined (__mips64)
+#include "mips64.h"
 #else
 #error "Unsupported dwarf unwind architecture"
 #endif
