@@ -1638,6 +1638,20 @@ query_statement (string const & func,
 		 Dwarf_Addr stmt_addr,
 		 dwarf_query * q)
 {
+  if (1)
+  {
+    if (q->dw.is_mips64_msym32(scope_die))
+      {
+        /* Force sign extension */
+        if (q->sess.verbose > 2)
+          clog << "query_statement " << func << "@" << file << ":" << line
+            << " sign-extend stmt_addr " << hex << stmt_addr
+            << " to " << hex << ((int64_t)((int32_t)stmt_addr))
+            << " because were on mips64 with 32bit symbols" << endl;
+        stmt_addr = (int32_t)stmt_addr;
+      }
+  }
+
   try
     {
       q->add_probe_point(func, file ? file : "",
