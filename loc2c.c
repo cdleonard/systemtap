@@ -1937,6 +1937,15 @@ translate_base_fetch (struct obstack *pool, int indent,
   *input = loc;
 }
 
+static bool
+is_elf_mips64(Elf *elf)
+{
+  GElf_Ehdr ehdr_mem;
+  GElf_Ehdr* ehdr = gelf_getehdr (elf, &ehdr_mem);
+  return ehdr->e_machine == EM_MIPS &&
+      ehdr->e_ident[EI_CLASS] == ELFCLASS64;
+}
+
 /* Determine the maximum size of a base type, from some DIE in the CU.  */
 static Dwarf_Word
 max_fetch_size (struct location *loc, Dwarf_Die *die)
@@ -1949,6 +1958,13 @@ max_fetch_size (struct location *loc, Dwarf_Die *die)
     FAIL (loc, N_("cannot determine CU address size from %s: %s"),
 	  dwarf_diename (die), dwarf_errmsg (-1));
 
+  if (address_size == 4)
+    {
+      if (is_elf_mips64(dwarf_getelf (loc->context->dwarf)))
+        {
+          address_size = 8;
+        }
+    }
   return address_size;
 }
 
