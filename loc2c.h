@@ -39,7 +39,8 @@ struct location *c_translate_location (struct obstack *,
 				       size_t locexprlen,
 				       struct location **input,
 				       Dwarf_Attribute *fb_attr,
-				       const Dwarf_Op *cfa_ops);
+				       const Dwarf_Op *cfa_ops,
+				       Dwarf *dwarf);
 
 /* Translate a fragment for a compile-time constant from DW_AT_const_value.
  */
@@ -53,7 +54,8 @@ struct location *c_translate_constant (struct obstack *,
 							     struct obstack *,
 							     Dwarf_Addr),
 				       int indent, Dwarf_Addr dwbias,
-				       Dwarf_Attribute *attr);
+				       Dwarf_Attribute *attr,
+				       Dwarf *dwarf);
 
 /* Translate a fragment to dereference the given DW_TAG_pointer_type DIE,
    where *INPUT is the location of the pointer with that type.  */
@@ -122,7 +124,8 @@ struct location *c_translate_argument (struct obstack *,
 				       void (*emit_address) (void *fail_arg,
 							     struct obstack *,
 							     Dwarf_Addr),
-				       int indent, const char *value);
+				       int indent, const char *value,
+				       Dwarf *dwarf);
 
 
 
