@@ -3231,6 +3231,24 @@ dwflpp::translate_location(struct obstack *pool,
   else
     cfa_ops = NULL;
 
+  Dwarf_Op expr_hack[1];
+  if (len == 1 && expr[0].atom == DW_OP_constu && tail)
+    {
+      Dwarf_Addr bias;
+      Elf* elf = (dwarf_getelf (module_dwarf)
+                  ?: dwfl_module_getelf (this->module, &bias));
+      GElf_Ehdr ehdr_mem;
+      GElf_Ehdr* ehdr = gelf_getehdr (elf, &ehdr_mem);
+      if (ehdr->e_machine == EM_MIPS)
+        {
+          /* Force sign extension */
+          if (sess.verbose > 2)
+            clog << "translate_location hack to interpret single DW_OP_constu as DW_OP_plus_uconst on mips" << endl;
+          expr_hack[0] = expr[0];
+          expr_hack[0].atom = DW_OP_plus_uconst;
+          expr = expr_hack;
+        }
+    }
   return c_translate_location (pool, &loc2c_error, this,
                                &loc2c_emit_address,
                                1, 0 /* PR9768 */,
