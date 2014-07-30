@@ -3156,7 +3156,7 @@ dwflpp::translate_location(struct obstack *pool,
   if (dwarf_whatattr (attr) == DW_AT_const_value)
     {
       *tail = c_translate_constant (pool, &loc2c_error, this,
-				    &loc2c_emit_address, 0, pc, attr);
+				    &loc2c_emit_address, 0, pc, attr, module_dwarf);
       return *tail;
     }
 
@@ -3234,7 +3234,7 @@ dwflpp::translate_location(struct obstack *pool,
   return c_translate_location (pool, &loc2c_error, this,
                                &loc2c_emit_address,
                                1, 0 /* PR9768 */,
-                               pc, attr, expr, len, tail, fb_attr, cfa_ops);
+                               pc, attr, expr, len, tail, fb_attr, cfa_ops, module_dwarf);
 }
 
 
@@ -3828,7 +3828,7 @@ dwflpp::literal_stmt_for_local (vector<Dwarf_Die>& scopes,
 	  head = c_translate_location (&pool, &loc2c_error, this,
 				       &loc2c_emit_address,
 				       1, 0, pc,
-				       NULL, &addr_loc, 1, &tail, NULL, NULL);
+				       NULL, &addr_loc, 1, &tail, NULL, NULL, module_dwarf);
 	}
       else
 	{
@@ -3930,7 +3930,7 @@ dwflpp::literal_stmt_for_return (Dwarf_Die *scope_die,
                                                  &loc2c_emit_address,
                                                  1, 0 /* PR9768 */,
                                                  pc, NULL, locops, nlocops,
-                                                 &tail, NULL, NULL);
+                                                 &tail, NULL, NULL, module_dwarf);
 
   /* Translate the ->bar->baz[NN] parts. */
 
@@ -3990,7 +3990,7 @@ dwflpp::literal_stmt_for_pointer (Dwarf_Die *start_typedie,
   obstack_init (&pool);
   struct location *head = c_translate_argument (&pool, &loc2c_error, this,
                                                 &loc2c_emit_address,
-                                                1, "STAP_ARG_pointer");
+                                                1, "STAP_ARG_pointer", module_dwarf);
   struct location *tail = head;
 
   /* Translate the ->bar->baz[NN] parts. */
