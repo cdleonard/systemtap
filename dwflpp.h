@@ -681,6 +681,7 @@ private:
 
 public:
   Dwarf_Addr pr15123_retry_addr (Dwarf_Addr pc, Dwarf_Die* var);
+  bool is_mips64_msym32(Dwarf_Die *die);
 };
 
 // Template <void> specializations for iterate_over_* functions
