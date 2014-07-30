@@ -56,6 +56,7 @@ struct location_context
   Dwarf_Addr pc;
   Dwarf_Attribute *fb_attr;
   const Dwarf_Op *cfa_ops;
+  Dwarf *dwarf;
 };
 
 struct location
@@ -140,7 +141,8 @@ new_context (struct obstack *pool,
 				   struct obstack *, Dwarf_Addr),
 	     Dwarf_Addr dwbias, Dwarf_Addr pc_address,
 	     Dwarf_Attribute *attr, Dwarf_Attribute *fb_attr,
-	     const Dwarf_Op *cfa_ops)
+	     const Dwarf_Op *cfa_ops,
+	     Dwarf *dwarf)
 {
   struct location_context *ctx = obstack_alloc (pool, sizeof *ctx);
   ctx->pool = pool;
@@ -152,6 +154,7 @@ new_context (struct obstack *pool,
   ctx->pc = pc_address;
   ctx->fb_attr = fb_attr;
   ctx->cfa_ops = cfa_ops;
+  ctx->dwarf = dwarf;
   return ctx;
 }
 
@@ -257,10 +260,11 @@ c_translate_constant (struct obstack *pool,
 		      void (*emit_address) (void *fail_arg,
 					    struct obstack *,
 					    Dwarf_Addr),
-		      int indent, Dwarf_Addr dwbias, Dwarf_Attribute *attr)
+		      int indent, Dwarf_Addr dwbias, Dwarf_Attribute *attr,
+		      Dwarf *dwarf)
 {
   return translate_constant (new_context (pool, fail, fail_arg, emit_address,
-					  dwbias, 0, attr, NULL, NULL),
+					  dwbias, 0, attr, NULL, NULL, dwarf),
 			     indent, attr);
 }
 
@@ -1428,14 +1432,15 @@ c_translate_location (struct obstack *pool,
 		      Dwarf_Attribute *attr,
 		      const Dwarf_Op *expr, size_t len,
 		      struct location **input, Dwarf_Attribute *fb_attr,
-		      const Dwarf_Op *cfa_ops)
+		      const Dwarf_Op *cfa_ops,
+		      Dwarf *dwarf)
 {
   indent += 2;
 
   struct location_context *ctx;
   if (*input == NULL)
     ctx = new_context (pool, fail, fail_arg, emit_address, dwbias, pc_address,
-		       attr, fb_attr, cfa_ops);
+		       attr, fb_attr, cfa_ops, dwarf);
   else
     {
       ctx = (*input)->context;
@@ -1486,7 +1491,8 @@ c_translate_argument (struct obstack *pool,
                       void *fail_arg,
                       void (*emit_address) (void *fail_arg,
                                             struct obstack *, Dwarf_Addr),
-                      int indent, const char *value)
+                      int indent, const char *value,
+                      Dwarf *dwarf)
 {
   indent += 2;
 
@@ -1496,7 +1502,7 @@ c_translate_argument (struct obstack *pool,
 
   struct location *loc = obstack_alloc (pool, sizeof *loc);
   loc->context = new_context (pool, fail, fail_arg, emit_address, 0,
-			      0, NULL, NULL, NULL);
+			      0, NULL, NULL, NULL, dwarf);
   loc->next = NULL;
   loc->ops = NULL;
   loc->nops = 0;
