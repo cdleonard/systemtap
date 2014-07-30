@@ -3054,6 +3054,31 @@ dwflpp::die_location_as_function_string(Dwarf_Addr pc, Dwarf_Die *die)
   return locstr;
 }
 
+static bool
+is_elf_mips64(Elf *elf)
+{
+  GElf_Ehdr ehdr_mem;
+  GElf_Ehdr* ehdr = gelf_getehdr (elf, &ehdr_mem);
+  return ehdr->e_machine == EM_MIPS &&
+      ehdr->e_ident[EI_CLASS] == ELFCLASS64;
+}
+
+bool
+dwflpp::is_mips64_msym32(Dwarf_Die *die)
+{
+  Dwarf_Addr bias;
+  Elf* elf = (dwarf_getelf (module_dwarf)
+              ?: dwfl_module_getelf (this->module, &bias));
+  if (!::is_elf_mips64(elf)) {
+      return false;
+  }
+
+  Dwarf_Die cu_mem;
+  uint8_t address_size;
+  dwarf_diecu (die, &cu_mem, &address_size, NULL);
+  return (address_size == 4);
+}
+
 struct location *
 dwflpp::translate_location(struct obstack *pool,
                            Dwarf_Attribute *attr, Dwarf_Die *die,
@@ -3084,6 +3109,15 @@ dwflpp::translate_location(struct obstack *pool,
      to be passed in, but instead should now be zero for the same reason. */
 
  retry:
+  if (is_mips64_msym32(die))
+    {
+      /* Force sign extension */
+      if (sess.verbose > 2)
+        clog << "query_statement truncate pc=" << hex << pc
+          << " to " << hex << (uint32_t)pc
+          << " for lookup on mips64 with 32bit symbols" << endl;
+      pc = (uint32_t)pc;
+    }
   switch (dwarf_getlocation_addr (attr, pc /*+ module_bias*/, &expr, &len, 1))
     {
     case 1:			/* Should always happen.  */
