@@ -89,7 +89,8 @@ static void
 handle_fields (struct obstack *pool,
 	       struct location *head, struct location *tail,
 	       Dwarf_Addr cubias, Dwarf_Die *vardie, Dwarf_Addr pc,
-	       char **fields)
+	       char **fields,
+	       Dwarf *dwarf)
 {
   Dwarf_Attribute attr_mem;
 
@@ -192,7 +193,7 @@ handle_fields (struct obstack *pool,
 	      c_translate_location (pool, NULL, NULL, NULL,
 				    1, cubias, pc, &attr_mem,
 				    locexpr, locexpr_len,
-				    &tail, NULL, NULL);
+				    &tail, NULL, NULL, dwarf);
 	    }
 	  ++fields;
 	  break;
@@ -294,7 +295,8 @@ handle_fields (struct obstack *pool,
 static void
 handle_variable (Dwarf_Die *lscopes, int lnscopes, int out,
 		 Dwarf_Addr cubias, Dwarf_Die *vardie, Dwarf_Addr pc,
-		 Dwarf_Op *cfa_ops, char **fields)
+		 Dwarf_Op *cfa_ops, char **fields,
+		 Dwarf *dwarf)
 {
   struct obstack pool;
   obstack_init (&pool);
@@ -345,7 +347,7 @@ handle_variable (Dwarf_Die *lscopes, int lnscopes, int out,
   if (dwarf_attr_integrate (vardie, DW_AT_const_value, &attr_mem) != NULL)
     /* There is no location expression, but a constant value instead.  */
     head = tail = c_translate_constant (&pool, &fail, NULL, NULL,
-					1, cubias, &attr_mem);
+					1, cubias, &attr_mem, dwarf);
   else
     {
       if (dwarf_attr_integrate (vardie, DW_AT_location, &attr_mem) == NULL)
@@ -359,10 +361,10 @@ handle_variable (Dwarf_Die *lscopes, int lnscopes, int out,
       head = c_translate_location (&pool, &fail, NULL, NULL,
 				   1, cubias, pc, &attr_mem,
 				   locexpr, locexpr_len,
-				   &tail, fb_attr, cfa_ops);
+				   &tail, fb_attr, cfa_ops, dwarf);
     }
 
-  handle_fields (&pool, head, tail, cubias, vardie, pc, fields);
+  handle_fields (&pool, head, tail, cubias, vardie, pc, fields, dwarf);
 }
 
 static void
@@ -656,8 +658,11 @@ In the fifth form, the access is a store rather than a fetch."
 	    if (dwarf_tag (&scopes[i]) == DW_TAG_subprogram)
 	      {
 		const Dwarf_Op *locexpr;
+		Dwfl_Module *mod = dwfl_addrmodule (dwfl, pc);
+		Dwarf_Addr bias;
+		Dwarf *dwarf = dwfl_module_getdwarf (mod, &bias);
 		int locexpr_len = dwfl_module_return_value_location
-		  (dwfl_addrmodule (dwfl, pc), &scopes[i], &locexpr);
+		  (mod, &scopes[i], &locexpr);
 		if (locexpr_len < 0)
 		  error (EXIT_FAILURE, 0,
 			 "dwfl_module_return_value_location: %s",
@@ -668,9 +673,9 @@ In the fifth form, the access is a store rather than a fetch."
 		head = c_translate_location (&pool, &fail, NULL, NULL,
 					     1, cubias, pc, NULL,
 					     locexpr, locexpr_len,
-					     &tail, NULL, NULL);
+					     &tail, NULL, NULL, dwarf);
 		handle_fields (&pool, head, tail, cubias, &scopes[i], pc,
-			       &argv[argi]);
+			       &argv[argi], dwarf);
 		free (scopes);
 		dwfl_end (dwfl);
 		return 0;
@@ -709,6 +714,7 @@ In the fifth form, the access is a store rather than a fetch."
 	  size_t cfa_nops;
 	  Dwarf_Addr bias;
 	  Dwfl_Module *module = dwfl_addrmodule (dwfl, pc);
+	  Dwarf *dwarf = NULL;
 	  if (module != NULL)
 	    {
 	      // Try debug_frame first, then fall back on eh_frame.
@@ -729,10 +735,11 @@ In the fifth form, the access is a store rather than a fetch."
 			dwarf_frame_cfa (frame, &cfa_ops, &cfa_nops);
 		    }
 		}
+	      dwarf = dwfl_module_getdwarf (module, &bias);
 	    }
 
 	  handle_variable (scopes, n, out, cubias, &vardie, pc, cfa_ops,
-			   &argv[argi]);
+			   &argv[argi], dwarf);
 	}
     }
 
