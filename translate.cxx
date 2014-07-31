@@ -6127,7 +6127,7 @@ static bool need_byte_swap_for_target (const unsigned char e_ident[])
 #endif
 }
 
-static void create_debug_frame_hdr (const unsigned char e_ident[],
+static void create_debug_frame_hdr (GElf_Ehdr *ehdr,
 				    Elf_Data *debug_frame,
 				    void **debug_frame_hdr,
 				    size_t *debug_frame_hdr_len,
@@ -6145,11 +6145,20 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
   // In the .debug_frame the FDE encoding is always DW_EH_PE_absptr.
   // So there is no need to read the CIEs.  And the size is either 4
   // or 8, depending on the elf class from e_ident.
+  const unsigned char *e_ident = ehdr->e_ident;
   int size = (e_ident[EI_CLASS] == ELFCLASS32) ? 4 : 8;
   bool need_byte_swap = need_byte_swap_for_target (e_ident);
 #define host_to_target_64(x) (need_byte_swap ? bswap_64((x)) : (x))
 #define host_to_target_32(x) (need_byte_swap ? bswap_32((x)) : (x))
 
+  int fde_addr_size = size;
+  bool mips64_msym32 = false;
+  /* Should also check the CU address_size somehow. */
+  if (ehdr->e_machine == EM_MIPS && size == 8)
+    {
+      fde_addr_size = 4;
+      mips64_msym32 = true;
+    }
   int res = 0;
   Dwarf_Off off = 0;
   Dwarf_CFI_Entry entry;
@@ -6166,10 +6175,16 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
 	  else
 	    {
 	      Dwarf_Addr addr;
-	      if (size == 4)
+	      if (fde_addr_size == 4)
 		addr = (*((uint32_t *) entry.fde.start));
 	      else
 		addr = (*((uint64_t *) entry.fde.start));
+              if (mips64_msym32)
+                {
+                  if (session.verbose > 1)
+                    clog << "sign-extend FDE initial_address=" << hex << addr << endl;
+                  addr = (int32_t)(host_to_target_32((uint32_t)addr));
+                }
 	      fdes.insert(pair<Dwarf_Addr, Dwarf_Off>(addr, off));
 	    }
 	}
@@ -6322,7 +6337,7 @@ static void get_unwind_data (Dwfl_Module *m,
     }
 
   if (*debug_frame != NULL && *debug_len > 0)
-    create_debug_frame_hdr (ehdr->e_ident, data,
+    create_debug_frame_hdr (ehdr, data,
 			    debug_frame_hdr, debug_frame_hdr_len,
 			    debug_frame_off, session, m);
 }
