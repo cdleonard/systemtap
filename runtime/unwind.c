@@ -15,6 +15,11 @@
 
 #include "unwind/unwind.h"
 
+/* This should perhaps be passed in through the debug_frame_hdr */
+#ifdef __mips64
+#define STP_MIPS64_MSYM32
+#endif
+
 static uleb128_t get_uleb128(const u8 **pcur, const u8 *end)
 {
 	const u8 *cur = *pcur;
@@ -319,6 +324,9 @@ static int parse_fde_cie(const u32 *fde, const u32 *cie,
 	/* Read augmentation string to determine frame_call and ptrType. */
 	*call_frame = 1;
 	*ptrType = DW_EH_PE_absptr;
+#ifdef STP_MIPS64_MSYM32
+	*ptrType = DW_EH_PE_data4;
+#endif
 	while (*aug) {
 		if (ciePtr > *cieStart) {
 			_stp_warn("Augmentation data runs past end\n");
@@ -365,6 +373,11 @@ static int parse_fde_cie(const u32 *fde, const u32 *cie,
 	*locRange = read_pointer(&fdePtr, *fdeEnd,
 				 *ptrType & (DW_EH_PE_FORM | DW_EH_PE_signed),
 				 user, compat_task);
+#ifdef STP_MIPS64_MSYM32
+	dbug_unwind(2, "sign-extend startLoc: %lx to %lx\n",
+		    *startLoc, (long)((int32_t)*startLoc));
+	*startLoc = (int32_t)*startLoc;
+#endif
 	dbug_unwind(2, "startLoc: %lx, locrange: %lx\n",
 		    *startLoc, *locRange);
 
