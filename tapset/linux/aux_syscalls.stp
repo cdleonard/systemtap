@@ -8,6 +8,9 @@
 #include <linux/net.h>
 #include "linux/compat_net.h"
 
+// Be sure to have a definition of syscall_get_nr
+#include "syscall.h"
+
 #ifdef CONFIG_COMPAT
 // Be sure we have 'SHMCTL', etc. defined.
 #include <linux/ipc.h>
