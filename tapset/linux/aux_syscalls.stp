@@ -2733,7 +2733,9 @@ static void _stp_sigaction_str(struct sigaction *act, char *ptr, int len)
     V(SA_RESTART),
     V(SA_NODEFER),
     V(SA_SIGINFO),
+#ifdef SA_RESTORER
     V(SA_RESTORER),
+#endif
     {0, NULL}
   };
   
