@@ -178,6 +178,14 @@ syscall_get_nr(struct task_struct *task, struct pt_regs *regs)
 }
 #endif
 
+#if defined(__mips__)
+static inline long
+syscall_get_nr(struct task_struct *task, struct pt_regs *regs)
+{
+	return regs->regs[2];
+}
+#endif
+
 #if defined(__ia64__)
 static inline long
 syscall_get_nr(struct task_struct *task, struct pt_regs *regs)
