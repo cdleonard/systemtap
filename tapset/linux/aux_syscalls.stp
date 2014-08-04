@@ -8,6 +8,9 @@
 #include <linux/net.h>
 #include "linux/compat_net.h"
 
+// Be sure to have a definition of syscall_get_nr
+#include "syscall.h"
+
 /*
 * Simple lookup functions for mapping values to names
 * using embedded C. Use these functions to create safe,
