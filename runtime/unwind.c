@@ -753,6 +753,8 @@ adjustStartLoc (unsigned long startLoc,
 
 }
 
+#define STP_DEBUG_FRAME_HDR_LEN 4
+
 /* If we previously created an unwind header, then use it now to binary search */
 /* for the FDE corresponding to pc. */
 static u32 *_stp_search_unwind_hdr(unsigned long pc,
@@ -767,7 +769,7 @@ static u32 *_stp_search_unwind_hdr(unsigned long pc,
 	unsigned num, tableSize, t2;
 	unsigned long eh_hdr_addr = m->unwind_hdr_addr;
 
-	if (hdr == NULL || hdr_len < 4 || hdr[0] != 1) {
+	if (hdr == NULL || hdr_len < STP_DEBUG_FRAME_HDR_LEN || hdr[0] != 1) {
 		_stp_warn("no or bad debug frame hdr\n");
 		return NULL;
 	}
@@ -795,7 +797,7 @@ static u32 *_stp_search_unwind_hdr(unsigned long pc,
 		_stp_warn("bad unwind table encoding");
 		return NULL;
 	}
-	ptr = hdr + 4;
+	ptr = hdr + STP_DEBUG_FRAME_HDR_LEN;
 	end = hdr + hdr_len;
 	{
 		// XXX Can the header validity be checked just once?
