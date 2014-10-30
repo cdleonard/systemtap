@@ -41,6 +41,8 @@ extern "C" {
 #include <inttypes.h>
 }
 
+#define STP_DEBUG_FRAME_HDR_LEN 4
+
 // Max unwind table size (debug or eh) per module. Somewhat arbitrary
 // limit (a bit more than twice the .debug_frame size of my local
 // vmlinux for 2.6.31.4-83.fc12.x86_64).
@@ -6391,18 +6393,19 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
       *debug_frame_off = (*it).first - first_addr;
     }
 
-  size_t total_size = 4 + (2 * size) + (2 * size * fdes.size());
+  size_t total_size = STP_DEBUG_FRAME_HDR_LEN + (2 * size) + (2 * size * fdes.size());
   uint8_t *hdr = (uint8_t *) malloc(total_size);
   *debug_frame_hdr = hdr;
   *debug_frame_hdr_len = total_size;
 
+  memset(hdr, 0, STP_DEBUG_FRAME_HDR_LEN);
   hdr[0] = 1; // version
   hdr[1] = DW_EH_PE_absptr; // ptr encoding
   hdr[2] = (size == 4) ? DW_EH_PE_udata4 : DW_EH_PE_udata8; // count encoding
   hdr[3] = DW_EH_PE_absptr; // table encoding
   if (size == 4)
     {
-      uint32_t *table = (uint32_t *)(hdr + 4);
+      uint32_t *table = (uint32_t *)(hdr + STP_DEBUG_FRAME_HDR_LEN);
       *table++ = host_to_target_32 ((uint32_t) 0); // eh_frame_ptr, unused
       *table++ = host_to_target_32 ((uint32_t) fdes.size());
       for (it = fdes.begin(); it != fdes.end(); it++)
@@ -6413,7 +6416,7 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
     }
   else
     {
-      uint64_t *table = (uint64_t *)(hdr + 4);
+      uint64_t *table = (uint64_t *)(hdr + STP_DEBUG_FRAME_HDR_LEN);
       *table++ = host_to_target_64 ((uint64_t) 0); // eh_frame_ptr, unused
       *table++ = host_to_target_64 ((uint64_t) fdes.size());
       for (it = fdes.begin(); it != fdes.end(); it++)
