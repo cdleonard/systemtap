@@ -41,7 +41,7 @@ extern "C" {
 #include <inttypes.h>
 }
 
-#define STP_DEBUG_FRAME_HDR_LEN 4
+#define STP_DEBUG_FRAME_HDR_LEN 8
 
 // Max unwind table size (debug or eh) per module. Somewhat arbitrary
 // limit (a bit more than twice the .debug_frame size of my local
@@ -6402,6 +6402,9 @@ static void create_debug_frame_hdr (const unsigned char e_ident[],
   hdr[1] = DW_EH_PE_absptr; // ptr encoding
   hdr[2] = (size == 4) ? DW_EH_PE_udata4 : DW_EH_PE_udata8; // count encoding
   hdr[3] = DW_EH_PE_absptr; // table encoding
+
+  hdr[4] = DW_EH_PE_absptr; // FDE addr size
+
   if (size == 4)
     {
       uint32_t *table = (uint32_t *)(hdr + STP_DEBUG_FRAME_HDR_LEN);

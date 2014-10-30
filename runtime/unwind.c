@@ -169,7 +169,6 @@ static int parse_fde_cie(const u32 *fde, const u32 *cie,
 
 	/* Read augmentation string to determine frame_call and ptrType. */
 	*call_frame = 1;
-	*ptrType = DW_EH_PE_absptr;
 	while (*aug) {
 		if (ciePtr > *cieStart) {
 			_stp_warn("Augmentation data runs past end\n");
@@ -753,7 +752,7 @@ adjustStartLoc (unsigned long startLoc,
 
 }
 
-#define STP_DEBUG_FRAME_HDR_LEN 4
+#define STP_DEBUG_FRAME_HDR_LEN 8
 
 /* If we previously created an unwind header, then use it now to binary search */
 /* for the FDE corresponding to pc. */
@@ -1173,6 +1172,7 @@ static int unwind_frame(struct unwind_context *context,
 	uleb128_t retAddrReg = 0;
 	struct unwind_state *state = &context->state;
 	unsigned long addr;
+	const u8 *hdr = is_ehframe ? m->unwind_hdr: s->debug_hdr;
 
 	if (unlikely(table_len == 0)) {
 		// Don't _stp_warn about this, debug_frame and/or eh_frame
@@ -1194,6 +1194,9 @@ static int unwind_frame(struct unwind_context *context,
 
 	fde = _stp_search_unwind_hdr(pc, m, s, is_ehframe, user, compat_task);
 	dbug_unwind(1, "%s: fde=%lx\n", m->path, (unsigned long) fde);
+
+	// Initialize ptrType from debug frame header
+	ptrType = hdr[4];
 
 	/* found the fde, now set startLoc and endLoc */
 	if (fde != NULL && is_fde(fde, table, table_len, is_ehframe)) {
